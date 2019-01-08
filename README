@@ -1,0 +1,22 @@
+
+This project will be a digital thermostat utilising a raspiberry pi for control and relevant temeperature sensing and power relay
+components to interface with a traiditional 240V thermostat circuit.
+
+
+-> CONTROL:
+	- Currently intend to run a Raspberry PI Zero W as the control processor, connected to domestic WiFi Network
+	- Hoping to use MQTT protocol to allow remote control from web-interface or iOS application
+	- SSH login to device for programming/control
+	- TFT Touchcreen attached to PI for physcial control at unit
+-> ELECTICAL:
+	- 3.3v/240V Relay unit to switch on/off heating circuit
+	- 240VAC->5VDC Power supply split off incoming 240V circuit
+-> SOFTWARE:
+	- Main program to be completed in Python, utilising RaspPi GPIO libraries
+	- GUI to be created with PyQT
+	- iOS/Web Control via MQTT protocol
+
+TO:DO->
+
+- 8th Jan 2019
+Setup virtual env and github repo, start collating modules. Download/install PyQT and experiment with GUI Building.
