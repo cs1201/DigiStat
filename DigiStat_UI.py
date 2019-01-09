@@ -20,6 +20,10 @@ class DigiStat_Stack(QtWidgets.QWidget):
         self.bg.setGeometry(QtCore.QRect(0,0,320,240))
         self.bg.setPixmap(QtGui.QPixmap(os.getcwd() + "/bg_image.jpg"))
 
+class QLabel_White(QtWidgets.QLabel):
+    def __init__(self, parent):
+        QtWidgets.QLabel.__init__(self, parent)
+        self.setStyleSheet("color : white; font-size : 20pt")
 
 # Main GUI Class
 class DigiStat_MainWindow(object):
@@ -58,6 +62,7 @@ class DigiStat_MainWindow(object):
         self.stack_temp_config()
         self.stack_schedule_config()
         self.stack_calendar_config()
+        self.stack_weather_config()
 
         # Setup time label
         self.timeLabel = QtWidgets.QLabel(self.centralwidget)
@@ -130,7 +135,6 @@ class DigiStat_MainWindow(object):
         self.label.setGeometry(QtCore.QRect(120, 60, 91, 71))
         self.label.setObjectName("label")
 
-
     def stack_schedule_config(self):
         # 2 Sliders for start and end time
         return
@@ -138,6 +142,22 @@ class DigiStat_MainWindow(object):
     def stack_calendar_config(self):
         self.calendar = QtWidgets.QCalendarWidget(self.stack_calendar)
         self.calendar.setGeometry(QtCore.QRect(0, 0, 320, 200))
+
+    def stack_weather_config(self):
+        self.weather_icon = QtWidgets.QLabel(self.stack_weather)
+        self.weather_icon.setGeometry(QtCore.QRect(50, 50, 100, 100))
+        self.weather_icon.setPixmap(QtGui.QPixmap(os.getcwd() + "/curr_weather_icon.png"))
+        self.weather_icon.setScaledContents(True)
+
+        self.curr_temp = QLabel_White(self.stack_weather)
+        self.max_temp = QLabel_White(self.stack_weather)
+        self.min_temp = QLabel_White(self.stack_weather)
+        self.curr_temp.setGeometry(QtCore.QRect(160, 80, 80, 20))
+        self.max_temp.setGeometry(QtCore.QRect(200, 140, 80, 20))
+        self.min_temp.setGeometry(QtCore.QRect(200, 160, 80, 20))
+        self.curr_temp.setText("Curr: 12degC")
+        self.max_temp.setText("Max: 14degC")
+        self.min_temp.setText("Min: 5degC")
 
     # Signal function for Temp Button UP
     def temp_up(self):
@@ -158,12 +178,52 @@ class DigiStat_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         self.timeLabel.setText(_translate("MainWindow", time_str))
 
+    def update_weather(self, temp, temp_min, temp_max):
+        self.weather_icon.setPixmap(QtGui.QPixmap(os.getcwd() + "/curr_weather_icon.png"))
+        
+
     def update_target_temp(self, val):
         return
     def update_actual_temp(self, val):
         return
 
 #END OF CLASS
+
+def getWeather():
+
+    city = "Swindon"
+    forecast_api_url = "https://api.openweathermap.org/data/2.5/forecast?"
+    appkey = "45e2590c09906f78a25e34ba0307ecd7"
+
+    forecast_request = requests.get(forecast_api_url, params={"q":city, "appid": appkey, "units": "metric", "cnt": "5"})
+    forecast_data = json.loads(forecast_request.content).get('list')
+    print(forecast_data)
+
+    # Over length of list, retreieve min and max temp, average these. and output
+    avg_min = 0
+    avg_max = 0
+
+    # Get average over 15hrs [5x 3hr increments as determined by cnt param in request]
+    for timepoint in range(len(forecast_data)):
+
+        temp_min = float(forecast_data[timepoint].get("main").get("temp_min"))
+        temp_max = float(forecast_data[timepoint].get("main").get("temp_max"))
+
+        avg_min = ( avg_min + temp_min ) / (timepoint+1)
+        avg_max = ( avg_max + temp_max ) / (timepoint+1)
+
+    # Retrieve Current Temp and Description from content
+    temp_curr= float(forecast_data[0].get("main").get("temp"))
+    weather_desc = forecast_data[0].get("weather")[0].get("description")
+    # Get icon code from response content
+    icon_code = forecast_data[0].get("weather")[0].get('icon')
+    # Download weather icon based on curren weather
+    base_icon_url = "http://openweathermap.org/img/w/"
+    icon_url = base_icon_url + icon_code + ".png"
+    icon_response = requests.get(icon_url)
+    if icon_response.status_code == 200:
+        with open("curr_weather_icon.png", 'wb') as f:
+            f.write(icon_response.content)
 
 def temp_change(curr_temp):
     print(curr_temp)
