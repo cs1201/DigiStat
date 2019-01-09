@@ -5,7 +5,7 @@ components to interface with a traiditional 240V thermostat circuit.
 
 -> CONTROL:
 	- Currently intend to run a Raspberry PI Zero W as the control processor, connected to domestic WiFi Network
-	- Hoping to use MQTT protocol to allow remote control from web-interface or iOS application
+	- Planning to use MQTT protocol to allow remote control from web-interface or iOS application
 	- SSH login to device for programming/control
 	- TFT Touchcreen attached to PI for physcial control at unit
 -> ELECTICAL:
