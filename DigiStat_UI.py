@@ -1,7 +1,7 @@
 # 
 # DigiStat_UI.py
 # 
-# 
+# Created by Connor Stoner - Personal Home Therostat Automation project for Raspberry PI
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 import os
@@ -58,6 +58,7 @@ class DigiStat_MainWindow(object):
         # Setup toolbar
         self.config_toolbar()
         self.toolbarAnimation()
+    
 
         # Setup Stacked Widget to hold windows
         self.stack = QtWidgets.QStackedWidget(self.centralwidget)
@@ -152,11 +153,15 @@ class DigiStat_MainWindow(object):
         self.toolbar_settings.clicked.connect(partial(self.changeStack, 4))
 
     def autohideToolbar(self):
-        self.toolbar_show_animation.start()
-        QtCore.QTimer.singleShot(5000, self.hideToolbar)
+        if not self.toolbarToggle:
+            self.toolbar_show_animation.start()
+            QtCore.QTimer.singleShot(5000, self.hideToolbar)
+            self.toolbarToggle = not self.toolbarToggle
+            
 
     def hideToolbar(self):
         self.toolbar_hide_animation.start()
+        self.toolbarToggle = not self.toolbarToggle
 
     def changeStack(self, index):
         self.stack.setCurrentIndex(index)
@@ -186,6 +191,7 @@ class DigiStat_MainWindow(object):
     def stack_calendar_config(self):
         self.calendar = QtWidgets.QCalendarWidget(self.stack_calendar)
         self.calendar.setGeometry(QtCore.QRect(0, 40, 320, 200))
+        
 
     def stack_weather_config(self):
         self.weather_icon = QtWidgets.QLabel(self.stack_weather)
@@ -196,9 +202,11 @@ class DigiStat_MainWindow(object):
         self.curr_temp = QLabel_White(self.stack_weather)
         self.max_temp = QLabel_White(self.stack_weather)
         self.min_temp = QLabel_White(self.stack_weather)
+        self.weather_desc = QLabel_White(self.stack_weather)
         self.curr_temp.setGeometry(QtCore.QRect(160, 80, 150, 50))
         self.max_temp.setGeometry(QtCore.QRect(200, 140, 120, 25))
         self.min_temp.setGeometry(QtCore.QRect(200, 165, 120, 25))
+        self.weather_desc.setGeometry(QtCore.QRect(50,180, 200, 25))
         self.curr_temp.setText("12°C")
         # Override class stylesheet for CurrTemp [maybe can have it's own sub-class?]
         self.curr_temp.setStyleSheet("color: white; font-size: 48pt")
@@ -231,11 +239,12 @@ class DigiStat_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         self.timeLabel.setText(_translate("MainWindow", time_str))
 
-    def update_weather(self, temp, temp_min, temp_max):
+    def update_weather(self, temp, temp_min, temp_max, weather_desc):
         self.weather_icon.setPixmap(QtGui.QPixmap(os.getcwd() + "/curr_weather_icon.png"))
         self.curr_temp.setText("{:+.1f}°C".format(temp))
         self.min_temp.setText("Min: {:+.1f}°C".format(temp_min))
         self.max_temp.setText("Max: {:+.1f}°C".format(temp_max))
+        self.weather_desc.setText("{}".format(weather_desc))
         
     def update_target_temp(self, val):
         return
@@ -252,7 +261,6 @@ def getWeather():
 
     forecast_request = requests.get(forecast_api_url, params={"q":city, "appid": appkey, "units": "metric", "cnt": "5"})
     forecast_data = json.loads(forecast_request.content).get('list')
-    print(forecast_data)
 
     # Over length of list, retreieve min and max temp, average these. and output
     avg_min = 0
@@ -283,7 +291,7 @@ def getWeather():
         with open("curr_weather_icon.png", 'wb') as f:
             f.write(icon_response.content)
 
-    ui.update_weather(temp_curr, avg_min, avg_max)
+    ui.update_weather(temp_curr, avg_min, avg_max, weather_desc)
 
 def temp_change(curr_temp):
     print(curr_temp)
