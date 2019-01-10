@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'DigiStat.ui'
-#
-# Created by: PyQt5 UI code generator 5.10.1
-#
-# WARNING! All changes made in this file will be lost!
+# 
+# DigiStat_UI.py
+# 
+# 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 import os
@@ -14,15 +11,29 @@ from functools import partial
 import requests
 import json
 
-
+class ListenerLabel(QtWidgets.QLabel):
+    def __init__(self, parent):
+        QtWidgets.QLabel.__init__(self, parent)
+    
 # Custom Stack Widget with background
 class DigiStat_Stack(QtWidgets.QWidget):
     def __init__(self):
         super(DigiStat_Stack, self).__init__()
-        self.bg = QtWidgets.QLabel(self)
+        self.setMouseTracking(True)
+        self.bg = ListenerLabel(self)
         self.bg.setGeometry(QtCore.QRect(0,0,320,240))
         self.bg.setPixmap(QtGui.QPixmap(os.getcwd() + "/bg_image.jpg"))
+    
+    clicked = QtCore.pyqtSignal()
+    
+    def mousePressEvent(self, event):
+        print("MouseClicked!s")
+        # if event.button == QtCore.Qt.LeftButton:
+        self.click_pos_x = event.globalX()   
+        self.click_pos_y = event.globalY()
+        self.clicked.emit()
 
+# Custom White Font Label
 class QLabel_White(QtWidgets.QLabel):
     def __init__(self, parent):
         QtWidgets.QLabel.__init__(self, parent)
@@ -31,7 +42,8 @@ class QLabel_White(QtWidgets.QLabel):
 # Main GUI Class
 class DigiStat_MainWindow(object):
 
-    room_temp = 23
+    room_temp_val = 23
+    toolbarToggle = False
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -42,10 +54,10 @@ class DigiStat_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.toolbarwidget = QtWidgets.QWidget(self.centralwidget)
         # self.toolbarwidget.hide()
-        
         # TODO: Put Toolbar on it's own widget that can be hidden unless screen is tapped
         # Setup toolbar
         self.config_toolbar()
+        self.toolbarAnimation()
 
         # Setup Stacked Widget to hold windows
         self.stack = QtWidgets.QStackedWidget(self.centralwidget)
@@ -62,6 +74,11 @@ class DigiStat_MainWindow(object):
         self.stack.addWidget(self.stack_weather)
         self.stack.addWidget(self.stack_calendar)
         self.stack.addWidget(self.stack_settings)
+
+        self.stacks = [self.stack_temp, self.stack_schedule, self.stack_weather, self.stack_calendar, self.stack_settings]
+        
+        for stack in self.stacks:
+            stack.clicked.connect(self.autohideToolbar)
 
         # Config all stacks
         self.stack_temp_config()
@@ -81,7 +98,7 @@ class DigiStat_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         # Set temp page as intial window
-        self.stack.setCurrentIndex(2)
+        self.stack.setCurrentIndex(0)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -91,15 +108,29 @@ class DigiStat_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.Temp_UP.setText(_translate("MainWindow", "+"))
         self.Temp_DOWN.setText(_translate("MainWindow", "-"))
-        self.label.setText(_translate("MainWindow", "{}°C".format(self.room_temp)))
-        self.label.setStyleSheet("color: white; font-size: 48pt")
+        self.room_temp.setText(_translate("MainWindow", "{}°C".format(self.room_temp_val)))
+        self.room_temp.setStyleSheet("color: white; font-size: 48pt")
         self.timeLabel.setText(_translate("MainWindow", "00:00"))
         self.timeLabel.setStyleSheet("color: white")
         self.settingsLabel.setText(_translate("MainWindow", "Settings"))
         self.settingsLabel.setStyleSheet("color: white")
+        
+
+    def toolbarAnimation(self):
+        
+        self.toolbar_show_animation = QtCore.QPropertyAnimation(self.toolbarwidget, b"geometry")
+        self.toolbar_show_animation.setDuration(600)
+        self.toolbar_show_animation.setStartValue(QtCore.QRect(0, -40, 320, 40))
+        self.toolbar_show_animation.setEndValue(QtCore.QRect(0,0, 320, 40))
+
+        self.toolbar_hide_animation = QtCore.QPropertyAnimation(self.toolbarwidget, b"geometry")
+        self.toolbar_hide_animation.setDuration(600)
+        self.toolbar_hide_animation.setStartValue(QtCore.QRect(0, 0, 320, 40))
+        self.toolbar_hide_animation.setEndValue(QtCore.QRect(0, -40, 320, 40))
 
     def config_toolbar(self):
         # Add 5 buttons
+        self.toolbarwidget.setGeometry(QtCore.QRect(0, -40, 320, 40))
         self.toolbar_temp = QtWidgets.QPushButton(self.toolbarwidget)
         self.toolbar_schedule = QtWidgets.QPushButton(self.toolbarwidget)
         self.toolbar_weather = QtWidgets.QPushButton(self.toolbarwidget)
@@ -120,7 +151,13 @@ class DigiStat_MainWindow(object):
         self.toolbar_calendar.clicked.connect(partial(self.changeStack, 3))
         self.toolbar_settings.clicked.connect(partial(self.changeStack, 4))
 
-        
+    def autohideToolbar(self):
+        self.toolbar_show_animation.start()
+        QtCore.QTimer.singleShot(5000, self.hideToolbar)
+
+    def hideToolbar(self):
+        self.toolbar_hide_animation.start()
+
     def changeStack(self, index):
         self.stack.setCurrentIndex(index)
 
@@ -138,8 +175,8 @@ class DigiStat_MainWindow(object):
         self.Temp_DOWN.clicked.connect(self.temp_down)
 
         # Setup temp labels
-        self.label = QtWidgets.QLabel(self.stack_temp)
-        self.label.setGeometry(QtCore.QRect(100, 70, 100, 110))
+        self.room_temp = QLabel_White(self.stack_temp)
+        self.room_temp.setGeometry(QtCore.QRect(100, 70, 100, 110))
 
     def stack_schedule_config(self):
         # 2 Sliders for start and end time
@@ -168,19 +205,26 @@ class DigiStat_MainWindow(object):
         self.max_temp.setText("Max: 14°C")
         self.min_temp.setText("Min: 5°C")
 
+        # Refresh button to force weather request and update
+        self.weather_refresh = QtWidgets.QPushButton(self.stack_weather)
+        self.weather_refresh.setGeometry(QtCore.QRect(200, 200, 40, 40))
+        self.weather_refresh.clicked.connect(getWeather)
+
     # Signal function for Temp Button UP
     def temp_up(self):
         _translate = QtCore.QCoreApplication.translate
-        self.room_temp += 1
-        self.label.setText(_translate("MainWindow", "{}°C".format(self.room_temp)))
-        temp_change(self.room_temp)
+        self.room_temp_val += 1
+        self.room_temp.setText(_translate("MainWindow", "{}°C".format(self.room_temp_val)))
+        temp_change(self.room_temp_val)
+        self.toolbar_show_animation.start()
 
     # Signal function for Temp Button UP
     def temp_down(self):
         _translate = QtCore.QCoreApplication.translate
-        self.room_temp -= 1
-        self.label.setText(_translate("MainWindow", "{}°C".format(self.room_temp)))
-        temp_change(self.room_temp)
+        self.room_temp_val -= 1
+        self.room_temp.setText(_translate("MainWindow", "{}°C".format(self.room_temp_val)))
+        temp_change(self.room_temp_val)
+        self.toolbar_hide_animation.start()
 
     # Update time label
     def update_time(self, time_str):
@@ -189,9 +233,9 @@ class DigiStat_MainWindow(object):
 
     def update_weather(self, temp, temp_min, temp_max):
         self.weather_icon.setPixmap(QtGui.QPixmap(os.getcwd() + "/curr_weather_icon.png"))
-        self.curr_temp.setText("{}°C".format(temp))
-        self.min_temp.setText("Min: {}°C".format(temp_min))
-        self.max_temp.setText("Max: {}°C".format(temp_max))
+        self.curr_temp.setText("{:+.1f}°C".format(temp))
+        self.min_temp.setText("Min: {:+.1f}°C".format(temp_min))
+        self.max_temp.setText("Max: {:+.1f}°C".format(temp_max))
         
     def update_target_temp(self, val):
         return
@@ -215,13 +259,16 @@ def getWeather():
     avg_max = 0
 
     # Get average over 15hrs [5x 3hr increments as determined by cnt param in request]
-    for timepoint in range(len(forecast_data)):
+    # for timepoint in range(len(forecast_data)):
 
-        temp_min = float(forecast_data[timepoint].get("main").get("temp_min"))
-        temp_max = float(forecast_data[timepoint].get("main").get("temp_max"))
+    #     temp_min = float(forecast_data[timepoint].get("main").get("temp_min"))
+    #     temp_max = float(forecast_data[timepoint].get("main").get("temp_max"))
 
-        avg_min = ( avg_min + temp_min ) / (timepoint+1)
-        avg_max = ( avg_max + temp_max ) / (timepoint+1)
+    #     avg_min = ( avg_min + temp_min ) / (timepoint+1)
+    #     avg_max = ( avg_max + temp_max ) / (timepoint+1)
+
+    avg_min = float(forecast_data[0].get("main").get("temp_min"))
+    avg_max = float(forecast_data[0].get("main").get("temp_max"))
 
     # Retrieve Current Temp and Description from content
     temp_curr= float(forecast_data[0].get("main").get("temp"))
@@ -236,7 +283,7 @@ def getWeather():
         with open("curr_weather_icon.png", 'wb') as f:
             f.write(icon_response.content)
 
-    return temp_curr, temp_min, temp_max, weather_desc
+    ui.update_weather(temp_curr, avg_min, avg_max)
 
 def temp_change(curr_temp):
     print(curr_temp)
