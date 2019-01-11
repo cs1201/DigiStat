@@ -52,9 +52,10 @@ class DigiStat_MainWindow(object):
 
     room_temp_val = 23
     toolbarToggle = False
+    initial_stack_index = 0
 
     def setupUi(self, MainWindow):
-        MainWindow.setObjectName("MainWindow")
+        MainWindow.setObjectName("DigiStat")
         MainWindow.resize(320, 240)
         font = QtGui.QFont()
         font.setFamily("Arial Rounded MT Bold")
@@ -109,7 +110,7 @@ class DigiStat_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         # Set temp page as intial window
-        self.stack.setCurrentIndex(5)
+        self.stack.setCurrentIndex(self.initial_stack_index)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -157,6 +158,31 @@ class DigiStat_MainWindow(object):
         self.plot_canvas.setGeometry(QtCore.QRect(0, 40, 320, 200))
         self.plot_canvas.setStyleSheet("background-color:transparent;")
 
+
+        # Add 3 buttons to update time period over which plot is displayed [3h, 12h, 24h]
+        self.plot_button3 = QtWidgets.QPushButton(self.stack_plot)
+        self.plot_button12 = QtWidgets.QPushButton(self.stack_plot)
+        self.plot_button24 = QtWidgets.QPushButton(self.stack_plot)
+        self.plot_button3.setText("3h")
+        self.plot_button12.setText("12h")
+        self.plot_button24.setText("24h")
+        self.plot_button3.setGeometry(QtCore.QRect(80, 200, 60, 30))
+        self.plot_button12.setGeometry(QtCore.QRect(150, 200, 60, 30))
+        self.plot_button24.setGeometry(QtCore.QRect(220, 200, 60, 30))
+        self.plot_buttons = [self.plot_button3, self.plot_button12, self.plot_button24]
+
+        for idx in range(len(self.plot_buttons)):
+            self.plot_buttons[idx].clicked.connect(partial(self.rescaleTempPlot, idx))
+
+
+    def rescaleTempPlot(self, idx):
+        print("Trying to rescale plot")
+        rand_data = [[3, 4, 5, 3 ], [1,1,2,2,3,3,], [5, 6,3,2,1]]
+        self.temp_plot.clear()
+        self.temp_plot.plot(rand_data[idx], linewidth=0.4, color='g')
+        self.plot_canvas.draw()
+
+
     def toolbarAnimation(self):
         
         self.toolbar_show_animation = QtCore.QPropertyAnimation(self.toolbarwidget, b"geometry")
@@ -168,6 +194,10 @@ class DigiStat_MainWindow(object):
         self.toolbar_hide_animation.setDuration(600)
         self.toolbar_hide_animation.setStartValue(QtCore.QRect(0, 0, 320, 40))
         self.toolbar_hide_animation.setEndValue(QtCore.QRect(0, -40, 320, 40))
+
+
+    def showToolbar(self):
+        self.toolbarwidget.setGeometry(QtCore.QRect(0,0,320,40))
 
     def config_toolbar(self):
         # Add 5 buttons
@@ -205,6 +235,13 @@ class DigiStat_MainWindow(object):
 
     def changeStack(self, index):
         self.stack.setCurrentIndex(index)
+        # Make sure toolbar remains shown if plot stack is selected
+        if index == 5:
+            self.showToolbar()
+
+        # If weather stack is selected, then trigger API call to get current data
+        if index == 2:
+            getWeather()
 
     # CONFIGURE TEMPERATURE CONTROL STACK
     def stack_temp_config(self):
@@ -224,6 +261,11 @@ class DigiStat_MainWindow(object):
         self.room_temp.setGeometry(QtCore.QRect(100, 70, 100, 120))
         self.room_temp.setAlignment(QtCore.Qt.AlignCenter)
         self.room_temp.setStyleSheet("background-color: green;")
+
+        # Add button to show plot stack page
+        self.plot_show = QtWidgets.QPushButton(self.stack_temp)
+        self.plot_show.setGeometry(QtCore.QRect(10, 200, 30, 30))
+        self.plot_show.clicked.connect(partial(self.changeStack, 5))
 
     def stack_schedule_config(self):
         # 2 Sliders for start and end time
@@ -266,7 +308,6 @@ class DigiStat_MainWindow(object):
         self.room_temp_val += 1
         self.room_temp.setText(_translate("MainWindow", "{}°C".format(self.room_temp_val)))
         temp_change(self.room_temp_val)
-        self.toolbar_show_animation.start()
 
     # Signal function for Temp Button UP
     def temp_down(self):
@@ -274,7 +315,6 @@ class DigiStat_MainWindow(object):
         self.room_temp_val -= 1
         self.room_temp.setText(_translate("MainWindow", "{}°C".format(self.room_temp_val)))
         temp_change(self.room_temp_val)
-        self.toolbar_hide_animation.start()
 
     # Update time label
     def update_time(self, time_str):
@@ -337,6 +377,12 @@ def getWeather():
 
 def temp_change(curr_temp):
     print(curr_temp)
+
+# Function to be called by scheduler. Measure temp from sensor and activate heating circuit if below target temp
+# 
+def data_update():
+    # Get current temperature from sensor
+    return    
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

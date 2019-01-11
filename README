@@ -1,7 +1,7 @@
-
+DIGISTAT
+=========
 This project will be a digital thermostat utilising a raspiberry pi for control and relevant temeperature sensing and power relay
 components to interface with a traiditional 240V thermostat circuit.
-
 
 -> CONTROL:
 	- Currently intend to run a Raspberry PI Zero W as the control processor, connected to domestic WiFi Network
@@ -18,5 +18,18 @@ components to interface with a traiditional 240V thermostat circuit.
 
 TO:DO->
 
-- 8th Jan 2019
-Setup virtual env and github repo, start collating modules. Download/install PyQT and experiment with GUI Building.
+8th Jan 2019
+->Setup virtual env and github repo, start collating modules. Download/install PyQT and experiment with GUI Building.
+
+9th Jan 2019
+-> Weather integration with HTTP_GET API Call to online weather service
+-> Setup stacks to show individual panes
+-> Populated calendar pane with QCalendar widget (this probably doesn't need any further functionality)
+
+10th Jan 2019
+-> Added automation to auto-hide toolbar, need to set this on click of the area and autohide after certain number of seconds
+
+11th Jan 2019
+-> Added matplotlib to App, started formatting but this will need to be refactored into it's own class to keep tidy
+-> Always show toolbar when plot is selected to kill deadspace [NEED TO FIX: works when first selected, but ruins autohide schedule when switching back to another stack]
+-> Weather API refresh does not need to be on scheduler, this can just be triggered every time the stack is selected, or by refresh button on the stack. 
