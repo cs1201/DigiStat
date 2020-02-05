@@ -46,6 +46,43 @@ class QLabel_White(QtWidgets.QLabel):
         QtWidgets.QLabel.__init__(self, parent)
         self.setStyleSheet("color : white; font-size : 20pt")
 
+class TempPlot():
+    def __init__(self, parent, data):
+        # Intialise plot and formatting. To be redrawn when new data to be shown
+    
+        # Create figure for plot, add subplot axes and random data
+        # Setup plot to fit in window
+        fig_w = 320
+        fig_h = 200
+        fig_dpi = 200
+
+        self.temp_plot_figure = plot.figure(figsize=(fig_w/fig_dpi, fig_h/fig_dpi), dpi=fig_dpi, frameon=False)
+        self.temp_plot_figure.patch.set_facecolor("None")
+        self.temp_plot= self.temp_plot_figure.add_subplot(111)
+        rand_data = [3, 4, 5, 5 , 6]
+        self.temp_line, = plot.plot(rand_data, linewidth=0.4, color='g')
+        self.temp_plot.set_alpha(0.5)
+        self.temp_plot_figure.tight_layout()
+        self.temp_plot.yaxis.set_major_formatter(FuncFormatter(lambda x, y: "{}°C".format(x)))
+        self.temp_plot.tick_params(axis="y", pad = 1)
+        self.temp_plot.tick_params(axis="x", bottom=False, labelbottom=False)
+
+        # Add plot to canvas which can be shown in parent widget
+        self.plot_canvas = FigureCanvas(self.temp_plot_figure)
+        self.plot_canvas.setParent(parent)
+        self.plot_canvas.setGeometry(QtCore.QRect(0, 40, 320, 200))
+        self.plot_canvas.setStyleSheet("background-color:transparent;")
+
+    def redraw(self, data):
+        print(data)
+        self.temp_line.set_ydata(data)
+        self.temp_line.set_xdata(range(data))
+        # Reset limits
+        self.temp_plot.relim()
+        self.temp_plot.autoscale()
+        self.temp_plot_figure.canvas.draw()
+        self.temp_plot_figure.canvas.flush_events()
+
 
 # Main GUI Class
 class DigiStat_MainWindow(object):
@@ -137,27 +174,28 @@ class DigiStat_MainWindow(object):
     
         # Create figure for plot, add subplot axes and random data
         # Setup plot to fit in window
-        fig_w = 320
-        fig_h = 200
-        fig_dpi = 200
+        # fig_w = 320
+        # fig_h = 200
+        # fig_dpi = 200
 
-        self.temp_plot_figure = plot.figure(figsize=(fig_w/fig_dpi, fig_h/fig_dpi), dpi=fig_dpi, frameon=False)
-        self.temp_plot_figure.patch.set_facecolor("None")
-        self.temp_plot= self.temp_plot_figure.add_subplot(111)
+        # self.temp_plot_figure = plot.figure(figsize=(fig_w/fig_dpi, fig_h/fig_dpi), dpi=fig_dpi, frameon=False)
+        # self.temp_plot_figure.patch.set_facecolor("None")
+        # self.temp_plot= self.temp_plot_figure.add_subplot(111)
         rand_data = [3, 4, 5, 3, 3, 4, 4, 4, 5, 7, 7, 12, 14 , 5, 6, 12]
-        self.temp_plot.plot(rand_data, linewidth=0.4, color='g')
-        self.temp_plot.set_alpha(0.5)
-        self.temp_plot_figure.tight_layout()
-        self.temp_plot.yaxis.set_major_formatter(FuncFormatter(lambda x, y: "{}°C".format(x)))
-        self.temp_plot.tick_params(axis="y", pad = 1)
-        self.temp_plot.tick_params(axis="x", bottom=False, labelbottom=False)
+        # self.temp_line, = plot.plot(rand_data, linewidth=0.4, color='g')
+        # self.temp_plot.set_alpha(0.5)
+        # self.temp_plot_figure.tight_layout()
+        # self.temp_plot.yaxis.set_major_formatter(FuncFormatter(lambda x, y: "{}°C".format(x)))
+        # self.temp_plot.tick_params(axis="y", pad = 1)
+        # self.temp_plot.tick_params(axis="x", bottom=False, labelbottom=False)
 
-        # Add plot to canvas which can be shown in parent widget
-        self.plot_canvas = FigureCanvas(self.temp_plot_figure)
-        self.plot_canvas.setParent(self.stack_plot)
-        self.plot_canvas.setGeometry(QtCore.QRect(0, 40, 320, 200))
-        self.plot_canvas.setStyleSheet("background-color:transparent;")
+        # # Add plot to canvas which can be shown in parent widget
+        # self.plot_canvas = FigureCanvas(self.temp_plot_figure)
+        # self.plot_canvas.setParent(self.stack_plot)
+        # self.plot_canvas.setGeometry(QtCore.QRect(0, 40, 320, 200))
+        # self.plot_canvas.setStyleSheet("background-color:transparent;")
 
+        self.temp_plot = TempPlot(self.stack_plot, rand_data)
 
         # Add 3 buttons to update time period over which plot is displayed [3h, 12h, 24h]
         self.plot_button3 = QtWidgets.QPushButton(self.stack_plot)
@@ -177,10 +215,8 @@ class DigiStat_MainWindow(object):
 
     def rescaleTempPlot(self, idx):
         print("Trying to rescale plot")
-        rand_data = [[3, 4, 5, 3 ], [1,1,2,2,3,3,], [5, 6,3,2,1]]
-        self.temp_plot.clear()
-        self.temp_plot.plot(rand_data[idx], linewidth=0.4, color='g')
-        self.plot_canvas.draw()
+        rand_data = [[3, 4, 5, 7, 8 ], [1,1,2], [5,6,3, 4, 3, 3,3 ,3 ,3 ]]
+        self.temp_plot.redraw(rand_data[idx])
 
 
     def toolbarAnimation(self):
@@ -228,16 +264,24 @@ class DigiStat_MainWindow(object):
             QtCore.QTimer.singleShot(5000, self.hideToolbar)
             self.toolbarToggle = not self.toolbarToggle
             
-
     def hideToolbar(self):
         self.toolbar_hide_animation.start()
         self.toolbarToggle = not self.toolbarToggle
 
     def changeStack(self, index):
+        
+        # If current index before request to change is plot or calendar then trigger hide
+        if self.stack.currentIndex() in [3, 5]:
+            print("index was 3 or 5")
+            self.toolbar_hide_animation.start()
+
+        # Update current stack to be shown
         self.stack.setCurrentIndex(index)
-        # Make sure toolbar remains shown if plot stack is selected
-        if index == 5:
+
+        # Make sure toolbar remains shown if plot or calendar stack is selected
+        if index == 5 or index == 3:
             self.showToolbar()
+            # self.toolbarToggle = not self.toolbarToggle
 
         # If weather stack is selected, then trigger API call to get current data
         if index == 2:
